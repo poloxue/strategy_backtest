@@ -66,21 +66,21 @@ if __name__ == "__main__":
     #     "BCH-USD",
     #     # "LINK/USDT",
     # ]
-    # symbols = ["GOOG", "AAPL", "MSFT", "AMZN"]
+    symbols = ["GOOG", "AAPL", "MSFT", "AMZN", "NVDA", "META"]
     if len(symbols) % 2 != 0:
         raise ValueError(f"标的个数是{len(symbols)}, 无法被2整除")
 
     for symbol in symbols:
-        df = download(
-            symbol, start_date="2020-01-01", end_date="2025-11-30", interval="1w"
-        )
-        # df = yf.download(
-        #     symbol,
-        #     start="2021-01-01",
-        #     end="2025-11-30",
-        #     interval="1wk",
-        #     multi_level_index=False,
+        # df = download(
+        #     symbol, start_date="2020-01-01", end_date="2025-11-30", interval="1w"
         # )
+        df = yf.download(
+            symbol,
+            start="2021-01-01",
+            end="2025-11-30",
+            interval="1wk",
+            multi_level_index=False,
+        )
 
         data = bt.feeds.PandasData(
             dataname=df,
@@ -94,5 +94,8 @@ if __name__ == "__main__":
     print(f"初始持仓价值：{cerebro.broker.getvalue()}")
     strats = cerebro.run()
     print(f"最终持仓价值：{cerebro.broker.getvalue()}")
-    print(strats[0].analyzers.getbyname("drawdown").get_analysis())
+    max_drawdown = (
+        strats[0].analyzers.getbyname("drawdown").get_analysis()["max"]["drawdown"]
+    )
+    print(f"最大回撤：{max_drawdown}")
     cerebro.plot()
