@@ -17,6 +17,10 @@ class MomentumStrategy(bt.Strategy):
         self.count = len(self.datas)
         self.cut_pos = int(self.count / 2)
 
+    def notify_order(self, order: bt.Order):
+        if order.status == bt.Order.Margin:
+            print("Order is Margin")
+
     def next(self):
         sorted_datas = sorted(
             self.pchgs.keys(),
@@ -66,21 +70,21 @@ if __name__ == "__main__":
     #     "BCH-USD",
     #     # "LINK/USDT",
     # ]
-    symbols = ["GOOG", "AAPL", "MSFT", "AMZN", "NVDA", "META"]
+    # symbols = ["GOOG", "AAPL", "MSFT", "AMZN", "NVDA", "META"]
     if len(symbols) % 2 != 0:
         raise ValueError(f"标的个数是{len(symbols)}, 无法被2整除")
 
     for symbol in symbols:
-        # df = download(
-        #     symbol, start_date="2020-01-01", end_date="2025-11-30", interval="1w"
-        # )
-        df = yf.download(
-            symbol,
-            start="2021-01-01",
-            end="2025-11-30",
-            interval="1wk",
-            multi_level_index=False,
+        df = download(
+            symbol, start_date="2020-01-01", end_date="2025-11-30", interval="1w"
         )
+        # df = yf.download(
+        #     symbol,
+        #     start="2021-01-01",
+        #     end="2025-11-30",
+        #     interval="1wk",
+        #     multi_level_index=False,
+        # )
 
         data = bt.feeds.PandasData(
             dataname=df,
