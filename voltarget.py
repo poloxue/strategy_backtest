@@ -13,6 +13,7 @@ class VolTarget(bt.Strategy):
     params = (
         ("period", 20),
         ("target_vol", 0.15),
+        ("max_leverage", 1.5),
         ("annual_factor", 252),
     )
 
@@ -29,11 +30,9 @@ class VolTarget(bt.Strategy):
             print("Order is Completed")
 
     def next(self):
-        # target_percent = min(self.p.target_vol / self.volatility[0], 1.5)
-        # self.order_target_percent(target=target_percent)
-        # return
-        target_percent = min(self.p.target_vol / self.volatility[0], 1.5)
-        print(target_percent)
+        target_percent = min(
+            self.p.target_vol / self.volatility[0], self.p.max_leverage
+        )
         target_size = self.broker.getvalue() / self.data.close[0] * target_percent
         self.order_target_size(target=target_size)
 
@@ -42,7 +41,7 @@ class VolTarget(bt.Strategy):
 
 
 @click.command()
-@click.option("--symbol", default="BTC-USD", help="")
+@click.option("--symbol", default="SPY", help="")
 def main(symbol):
     cerebro = bt.Cerebro(stdstats=False)
 
@@ -56,7 +55,8 @@ def main(symbol):
     # cerebro.broker.set_coc(True)
     # cerebro.broker.set_slippage_perc(0.0000)
 
-    cerebro.addanalyzer(bt.analyzers.DrawDown)
+    cerebro.addanalyzer(bt.analyzers.DrawDown, _name="drawdown")
+    cerebro.addanalyzer(bt.analyzers.SharpeRatio, _name="sharpe")
     df = yf.download(
         symbol,
         start="2015-01-01",
@@ -72,14 +72,20 @@ def main(symbol):
     cerebro.addobserver(
         bt.observers.Benchmark, data=data, timeframe=bt.TimeFrame.NoTimeFrame
     )
-
     cerebro.addstrategy(VolTarget)
 
-    cerebro.run()
-    cerebro.plot()
+    strats = cerebro.run()
 
-    bt.CommissionInfo
-    bt.BackBroker
+    print(
+        "SharpeRatio",
+        strats[0].analyzers.getbyname("sharpe").get_analysis()["sharperatio"],
+    )
+    print(
+        "MaxDrawdown",
+        strats[0].analyzers.getbyname("drawdown").get_analysis()["max"]["drawdown"],
+    )
+
+    cerebro.plot()
 
 
 if __name__ == "__main__":
