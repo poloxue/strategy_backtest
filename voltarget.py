@@ -2,6 +2,7 @@ import backtrader as bt
 import numpy as np
 import click
 import yfinance as yf
+from analyzers.annualized_volatility import AnnualizedVolatility
 
 import warnings
 
@@ -26,8 +27,6 @@ class VolTarget(bt.Strategy):
     def notify_order(self, order: bt.Order):
         if order.status == bt.Order.Margin:
             print("Order is Margin")
-        elif order.status == bt.Order.Completed:
-            print("Order is Completed")
 
     def next(self):
         target_percent = min(
@@ -37,12 +36,16 @@ class VolTarget(bt.Strategy):
         self.order_target_size(target=target_size)
 
     def stop(self):
-        print(self.broker.getvalue())
+        print("组合价值:", self.broker.getvalue())
 
 
 @click.command()
 @click.option("--symbol", default="SPY", help="")
-def main(symbol):
+@click.option("--max-leverage", default=1.5, help="")
+@click.option("--target-volatility", default=0.2, help="")
+@click.option("--start-date", default="2015-01-01", help="")
+@click.option("--end-date", default="2025-11-30", help="")
+def main(symbol, max_leverage, target_volatility, start_date, end_date):
     cerebro = bt.Cerebro(stdstats=False)
 
     cerebro.broker.setcash(1e8)
@@ -57,12 +60,14 @@ def main(symbol):
 
     cerebro.addanalyzer(bt.analyzers.DrawDown, _name="drawdown")
     cerebro.addanalyzer(bt.analyzers.SharpeRatio, _name="sharpe")
+    cerebro.addanalyzer(AnnualizedVolatility, _name="annual_vol")
     df = yf.download(
         symbol,
-        start="2015-01-01",
-        end="2025-11-30",
+        start=start_date,
+        end=end_date,
         multi_level_index=False,
         auto_adjust=True,
+        progress=False,
     )
     data = bt.feeds.PandasData(dataname=df, name=symbol)
     data.plotinfo.plot = False
@@ -72,18 +77,22 @@ def main(symbol):
     cerebro.addobserver(
         bt.observers.Benchmark, data=data, timeframe=bt.TimeFrame.NoTimeFrame
     )
-    cerebro.addstrategy(VolTarget)
+    cerebro.addstrategy(
+        VolTarget, target_vol=target_volatility, max_leverage=max_leverage
+    )
 
     strats = cerebro.run()
 
-    print(
-        "SharpeRatio",
-        strats[0].analyzers.getbyname("sharpe").get_analysis()["sharperatio"],
+    sharpe_ratio = strats[0].analyzers.getbyname("sharpe").get_analysis()["sharperatio"]
+    max_drawdown = (
+        strats[0].analyzers.getbyname("drawdown").get_analysis()["max"]["drawdown"]
     )
-    print(
-        "MaxDrawdown",
-        strats[0].analyzers.getbyname("drawdown").get_analysis()["max"]["drawdown"],
+    annual_volatility = (
+        strats[0].analyzers.getbyname("annual_vol").get_analysis()["annual_vol"]
     )
+    print("夏普比率:", sharpe_ratio)
+    print("最大回撤:", max_drawdown)
+    print("年化波动:", annual_volatility)
 
     cerebro.plot()
 
