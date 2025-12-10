@@ -51,9 +51,7 @@ def main(symbol, max_leverage, target_volatility, start_date, end_date):
     cerebro.broker.setcash(1e8)
     cerebro.broker.setcommission(
         0.0005,
-        commtype=bt.CommInfoBase.COMM_PERC,
-        # automargin=True,
-        # leverage=2,
+        leverage=2,
     )
     # cerebro.broker.set_coc(True)
     # cerebro.broker.set_slippage_perc(0.0000)
@@ -73,7 +71,7 @@ def main(symbol, max_leverage, target_volatility, start_date, end_date):
     data.plotinfo.plot = False
     cerebro.adddata(data)
 
-    cerebro.addobserver(bt.observers.Cash)
+    cerebro.addobserver(bt.observers.Value)
     cerebro.addobserver(
         bt.observers.Benchmark, data=data, timeframe=bt.TimeFrame.NoTimeFrame
     )
