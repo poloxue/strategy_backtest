@@ -17,7 +17,7 @@ class ReveralStrategy(bt.Strategy):
     def next(self):
         if not self.position.size:
             self.barssince = 0
-            if self.returns[0] < -0.01:
+            if self.returns[0] < -0.005:
                 size = self.broker.getvalue() / self.data.close[0]
                 self.order_target_size(target=size)
                 self.entry_dt = bt.num2date(self.data.datetime[0])
@@ -36,7 +36,7 @@ class ReveralStrategy(bt.Strategy):
 @click.option("--interval", default="1h", help="结束时间")
 def main(symbol, start_date, end_date, interval):
     cerebro = bt.Cerebro(stdstats=False)
-    cerebro.broker.setcommission(0.001)
+    cerebro.broker.setcommission(0.001, leverage=2.0)
     cerebro.addobserver(bt.observers.Value)
 
     df = download(

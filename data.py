@@ -1,4 +1,5 @@
 import os
+import click
 import ccxt
 import pytz
 import datetime
@@ -104,3 +105,36 @@ def download(
     data["symbol"] = symbol
 
     return data
+
+
+@click.command()
+@click.argument("symbol")
+@click.option("--interval", "-i", default="1d", help="时间间隔，默认: 1d")
+@click.option("--start", "-s", help="开始时间 YYYY-MM-DD")
+@click.option("--end", "-e", help="结束时间 YYYY-MM-DD")
+@click.option("--output", "-o", help="输出文件，默认: symbol.csv")
+def main(symbol, interval, start, end, output):
+    """下载加密货币K线数据到CSV文件"""
+
+    if output is None:
+        output = f"{symbol.replace('/', '_')}.csv"
+
+    click.echo(f"下载 {symbol} 数据...")
+    click.echo(f"间隔: {interval}")
+    click.echo(f"时间范围: {start or '默认'} 到 {end or '默认'}")
+
+    # 下载数据
+    data = download(symbol=symbol, start_date=start, end_date=end, interval=interval)
+
+    if data.empty:
+        click.echo("错误: 没有获取到数据", err=True)
+        return
+
+    # 保存到CSV
+    data.to_csv(output)
+    click.echo(f"数据已保存到: {output}")
+    click.echo(f"共 {len(data)} 条记录")
+
+
+if __name__ == "__main__":
+    main()
